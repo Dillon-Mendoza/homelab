@@ -1,0 +1,5 @@
+hosts.txt
+*.txt
+
+# Ignore all files in the logs directory
+logs/*
