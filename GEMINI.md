@@ -7,7 +7,7 @@
 ## Identity
 
 **Company:** Mudd Labs
-**Product:** ClearMudd — SSH audit + access intelligence tool for Linux-heavy environments
+**Product #1:** ClearMudd — SSH audit + access intelligence tool for Linux-heavy environments
 **Mission:** Rooted in craft. Reaching past the last mark.
 
 ---
@@ -44,6 +44,109 @@
 - Dell server (KVM/QEMU: Ubuntu + Fedora VMs)
 
 **Preferences:** Self-hosted. Bare-metal over containerized. Python + Bash as the primary stack. Rust is a longer-term addition after Python fluency is established.
+
+---
+
+## Homelab Architecture
+
+### Devices
+
+---
+
+#### ThinkPad T14 Gen 2 — Daily Driver + Dev Machine
+| Spec | Detail |
+|------|--------|
+| CPU | AMD Ryzen 7 PRO 585U (16) |
+| RAM | 32GB |
+| Storage | 1TB SSD |
+| OS | Fedora 43 (primary) + Windows 11 (dual-boot) |
+| Username | `tp-mudd` |
+
+**Current role:** Daily driver, development machine, occasional VM work
+**Tooling:** VS Code + terminal
+**Services:** None currently
+**Future:** Run lightweight local services as the stack matures
+
+---
+
+#### Dell Server — Primary Infrastructure Node
+| Spec | Detail |
+|------|--------|
+| CPU | Intel i7-1065G7 (8) |
+| RAM | 8GB |
+| Storage | Single drive, under 1TB |
+| Host OS | Ubuntu |
+| Virtualization | KVM/QEMU running Fedora VM |
+
+**Current role:** Hosts practical, usable services and applications
+**Services:** KVM/QEMU hypervisor, Gitea (via Fedora VM)
+**Future:** Continue evolving — primary candidate for ClearMudd deployment and expanded service hosting as needs grow
+
+---
+
+#### Raspberry Pi 4 — Automation + Exit Node
+| Spec | Detail |
+|------|--------|
+| RAM | 4GB |
+| Storage | MicroSD |
+| OS | Raspberry Pi OS |
+
+**Current role:** Automation hub and Tailscale exit node
+**Services:** n8n (workflow automation)
+**Future:** Dedicated lightweight automation unit — expand n8n workflows, keep footprint lean
+
+---
+
+#### Raspberry Pi Zero 2 W — Bastion + Monitoring
+| Spec | Detail |
+|------|--------|
+| RAM | 512MB |
+| Storage | MicroSD |
+| OS | Raspberry Pi OS |
+
+**Current role:** Bastion host + lightweight monitoring node
+**Services:** SSH bastion, basic monitoring
+**Future:** Expand into network sentinel role — first line of visibility across the homelab
+
+---
+
+### Network Topology
+
+**Current state:** Flat network — all devices on the same subnet, no segmentation in place
+
+**Overlay:** Tailscale mesh connects all nodes — primary method for secure remote access across the homelab
+
+**Edge:** Not formally defined yet — no dedicated firewall or gatekeeper node in place
+
+---
+
+### ACL + Security Goals
+
+**Current state:** Open — no ACLs implemented beyond Tailscale's default behavior
+
+**Target state:** Tiered access model with explicit allow rules
+- Servers trusted within defined boundaries
+- Edge devices restricted by default
+- Bastion (Pi Zero 2 W) as the formal SSH entry point — no direct SSH to internal nodes
+- Tailscale ACLs as the first layer of enforcement
+- UFW hardening per node as a baseline
+
+**Segmentation roadmap:**
+1. Define Tailscale ACL policy — control which devices can reach which services
+2. Harden each node with UFW — default deny, explicit allow per service
+3. Formalize the Pi Zero 2 W as the network edge/gatekeeper
+4. Work toward VLAN segmentation as hardware allows
+
+---
+
+### Service Map
+
+| Device | Current Services | Future Services |
+|--------|-----------------|-----------------|
+| ThinkPad T14 | Dev tooling, VS Code | Lightweight local services |
+| Dell Server | KVM/QEMU, Gitea | ClearMudd, expanded app hosting |
+| Pi 4 | n8n, Tailscale exit node | Expanded automation workflows |
+| Pi Zero 2 W | SSH bastion, monitoring | Network sentinel, ACL enforcement point |
 
 ---
 
