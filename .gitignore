@@ -4,6 +4,3 @@ hosts.txt
 # Ignore all files in the logs directory
 logs/*
 
-linuxplus-pdf/*
-
-delete.md
