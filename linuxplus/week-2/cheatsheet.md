@@ -1,25 +1,30 @@
-# Week 2 Cheatsheet: Special Permissions & umask
+# Week 2 Cheatsheet: Special Permissions & ACLs
 
-| Permission | Symbolic | Numeric | Description |
-|------------|----------|---------|-------------|
-| SUID       | `u+s`    | `4000`  | Run with owner's privileges |
-| SGID       | `g+s`    | `2000`  | Run with group's privileges / inherit group |
-| Sticky Bit | `+t`     | `1000`  | Only owner can delete files |
+| Permission | Symbolic | Numeric | The "Why" |
+|------------|----------|---------|-----------|
+| **SUID**   | `u+s`    | `4000`  | Allow user to run a file with OWNER's privileges |
+| **SGID**   | `g+s`    | `2000`  | Shared dirs: inherit group ownership |
+| **Sticky Bit**| `+t`   | `1000`  | Shared dirs: only owner can delete files (`/tmp`) |
 
-| Command    | Description | Example |
-|------------|-------------|---------|
-| `umask`    | Display or set default permissions | `umask 022` |
-| `getfacl`  | Get file access control lists | `getfacl file` |
-| `setfacl`  | Set file access control lists | `setfacl -m u:user:rwx file` |
+| Command    | Purpose | Practical Example |
+|------------|---------|-------------------|
+| `umask`    | Filter default perms | `umask 022` (Sets 755/644) |
+| `getfacl`  | Read the ACL list | `getfacl file.txt` |
+| `setfacl`  | Modify the ACL list | `setfacl -m u:mudd:rw- file.txt` |
+| `chattr`   | Immutable files | `sudo chattr +i important.conf` (Root can't delete) |
 
-## Common Special Modes
-- **4755**: SUID + `rwxr-xr-x`
-- **2775**: SGID + `rwxrwxr-x`
-- **1777**: Sticky Bit + `rwxrwxrwx` (typical for `/tmp`)
+## The Special "s/t" vs "S/T" Indicator
+When you see `rwsr-sr-t`, the lowercase/uppercase means everything:
+- **`s/t` (lowercase)**: Special bit is SET, and the execute bit (`x`) is ALSO SET. (Correct/Active)
+- **`S/T` (UPPERCASE)**: Special bit is SET, but the execute bit (`x`) is NOT SET. (Inactive/Broken)
 
-## Character Representation
-- `s` (User): SUID is set and owner has execute permission.
-- `S` (User): SUID is set but owner DOES NOT have execute permission.
-- `s` (Group): SGID is set and group has execute permission.
-- `t` (Others): Sticky bit is set and others have execute permission.
-- `T` (Others): Sticky bit is set but others DO NOT have execute permission.
+## ACL Syntax (Quick Reference)
+- **Add/Modify**: `setfacl -m u:user:rwx file`
+- **Remove Specific**: `setfacl -x u:user file`
+- **Remove ALL ACLs**: `setfacl -b file`
+- **Default ACL (for dirs)**: `setfacl -m d:u:user:rwx dir` (New files inherit this)
+
+## Practical Pro-Tips
+- **The "Find" Scrutiny**: Use `find / -perm /6000 -type f` regularly on your Pi to find all SUID/SGID files. It's the first thing an attacker looks for.
+- **SGID Shared Dirs**: Always set SGID on your homelab project folders (`chmod 2775`). It prevents the "I can't edit my teammate's file" headache.
+- **umask in Scripts**: Set a local `umask` inside your bash scripts to ensure they create files with the correct security level (e.g., `umask 077` for a script that generates secrets).
