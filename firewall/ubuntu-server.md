@@ -16,6 +16,41 @@ Date Configured: April 22nd 2026
 
 ---
 
+## Cleanup Performed
+
+### Ghost process on port 8080 cleared
+Port 8080 was open in UFW with a docker-proxy process holding it, but no container claimed it. Likely a remnant of a previous Nextcloud container attempt.
+
+```bash
+# Identify what's listening on a port
+sudo ss -tlnpp | grep
+
+# Find process by port
+sudo lsof -i :
+
+# Inspect all containers for port references
+sudo docker inspect $(sudo docker ps -aq) | grep -i
+
+# Kill the ghost process
+sudo kill <pid>
+
+# Remove the UFW rule
+sudo ufw delete allow
+```
+
+### Duplicate SSH rules removed
+Port 22 and 22/tcp were both listed - redundant. Both removed after Tailscale-bound rule was confirmed working.
+
+### UFW not starting on boot - fixed
+UFW was previously masked or not enabled on boot. Fixed with:
+
+```bash
+sudo system enable ufw
+sudo systemctl is-enabled ufw
+```
+
+---
+
 # Key Commands
 
 ```bash
@@ -34,6 +69,25 @@ sudo systemctl is-enabled ufw
 # Check SELinux-equivalent denials (Ubuntu uses AppArmor)
 sudo aa-status
 ```
+---
+
+## Troubleshooting
+
+**Port appears open but nothing is listening**
+- Run `sudo ss -tlnpp | grep <port>` — if no output, nothing is bound
+- Run `sudo docker inspect $(sudo docker ps -aq) | grep -i <port>`
+  to rule out containers
+- If docker-proxy appears but no container claims it, it's a ghost
+- Kill the process with `sudo kill <pid>` and remove the UFW rule
+
+**Locked out after firewall changes**
+- Always add Tailscale-bound rule first and verify SSH works
+  in a new terminal before deleting broad rules
+- Physical access to device is the fallback if locked out remotely
+
+**UFW not starting on boot**
+- Check status with `sudo systemctl is-enabled ufw`
+- Enable with `sudo systemctl enable ufw`
 
 ---
 
