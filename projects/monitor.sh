@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 while IFS= read -r line; do
     device=$(echo $line | cut -d ',' -f 1)
