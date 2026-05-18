@@ -9,4 +9,4 @@ while IFS= read -r line; do
     else
         echo "UNCONFIRMED | $device | $ip"
     fi
-done < client.conf
+done < /usr/local/bin/client.conf
