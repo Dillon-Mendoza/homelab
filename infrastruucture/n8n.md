@@ -215,4 +215,3 @@ If n8n ever needs to be rebuilt from scratch:
 - [ ] Activate workflows in n8n canvas
 - [ ] Verify cron job is registered: `crontab -l`
 - [ ] Verify health check script is executable: `ls -la /usr/local/bin/check-n8n.sh`
- 
