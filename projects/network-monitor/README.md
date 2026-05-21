@@ -79,20 +79,21 @@ chmod 600 /usr/local/bin/muddbuilt/client.conf
 
 ## monitor.sh
 
-'''sh
+```sh
 #!/bin/sh
-
+ 
 while IFS= read -r line; do
     device=$(echo $line | cut -d ',' -f 1)
     ip=$(echo $line | cut -d ',' -f 2)
     ping $ip -c 3 > /dev/null 2>&1
-    if [$? -eq 0]; then
+    if [ $? -eq 0 ]; then
         echo "CONFIRMED | $device | $ip"
     else
         echo "UNCONFIRMED | $device | $ip"
     fi
 done < /scripts/client.conf
-'''
+```
+
 
 **Line by line:**
 - `while IFS= read -r line` — reads `client.conf` line by line, preserving whitespace
