@@ -9,4 +9,4 @@ while IFS= read -r line; do
     else
         echo "UNCONFIRMED | $device | $ip"
     fi
-done < /scripts/client.conf
+done < /home/tp-mudd/homelab/projects/network-monitor//client.conf
