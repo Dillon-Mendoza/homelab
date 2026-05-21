@@ -5,4 +5,4 @@ hosts.txt
 logs/*
 
 # Ignores all .conf files
-*.conf
+*.confdraw.io/
