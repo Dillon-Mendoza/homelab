@@ -24,9 +24,9 @@ Oracle Cloud Free Tier offers genuinely permanent free compute. The Always Free 
 | Network | 0.48 Gbps |
 | OS | Canonical Ubuntu 22.04 |
 | Region | US West (Phoenix) — us-phoenix-1 |
-| Internal IP | 10.0.0.57 |
-| Public IP | 161.153.55.136 (ephemeral) |
-| Tailscale IP | 100.69.91.29 |
+| Internal IP | <INTERNAL-IP> |
+| Public IP | <PUBLIC-IP> (ephemeral) |
+| Tailscale IP | <TAILSCALE-IP> |
 | Tag | tag:cloud |
  
 ---
@@ -90,7 +90,7 @@ Add to SSH config for convenience:
  
 ```
 Host muddcloud
-    HostName 161.153.55.136
+    HostName <PUBLIC-IP>
     User mudd
     IdentityFile ~/.ssh/muddcloud.key
 ```
@@ -160,7 +160,7 @@ sudo tailscale up --advertise-exit-node --ssh
  
 **Tailscale Admin → Machines → muddcloud → Edit route settings → approve exit node**
  
-> **Note:** Re-tagging a device clears route approvals. Re-approve after any tag change. Oracle also advertises `10.0.0.0/24` and `169.254.169.254/32` as routes — do NOT approve these.
+> **Note:** Re-tagging a device clears route approvals. Re-approve after any tag change.
  
 ---
  
@@ -247,5 +247,5 @@ This means remote script execution via the Oracle console is unavailable on this
  
 ---
  
-*Filed under: homelab/infrastructure/cloud*
+*Filed under: homelab/infrastructure/oracle-muddcloud.md
  
