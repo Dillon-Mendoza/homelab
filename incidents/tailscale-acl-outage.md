@@ -10,7 +10,7 @@
  
 After implementing a tiered default-deny Tailscale ACL, all devices routing through the Pi 4 exit node lost internet access. DNS resolved correctly, the LAN was healthy, and the gateway was reachable — but no traffic could reach the public internet. The fix was adding a single ACL grant permitting all tagged devices to forward traffic through `autogroup:internet`.
  
-A secondary issue was discovered: the Fedora VM had gone offline during the outage and required a Tailscale daemon restart to re-establish its connection and pull the updated ACL rules.
+A secondary issue was discovered: during the outage, the Fedora VM dropped of Tailscale and required a daemon restart to pull the update ACL
  
 ---
  
@@ -176,33 +176,53 @@ sudo systemctl restart tailscaled && sudo tailscale down && sudo tailscale up
 ```json
 "grants": [
     {
+        // Tier 0 ThinkPad, full availability
         "src": ["tag:t0"],
         "dst": ["*"],
         "ip":  ["*"],
     },
     {
+
+        // Tier 1: Dell Server, extends downward through the hierarchy only
         "src": ["tag:t1"],
-        "dst": ["tag:t2", "tag:t3", "tag:parked", "tag:guest"],
+        "dst": ["tag:t1", "tag:t2", "tag:t3", "tag:cloud", "tag:parked", "tag:guest"],
         "ip":  ["*"],
     },
     {
+        // Pi4, extends downward through the hierarchy only
         "src": ["tag:t2"],
         "dst": ["tag:t3", "tag:parked", "tag:guest"],
         "ip":  ["*"],
     },
     {
-        "src": ["tag:t0", "tag:t1", "tag:t2", "tag:t3", "tag:parked", "tag:guest", "tag:cloud"],
+        // Permit exit node internet forwarding
+        "src": ["tag:t0", "tag:t1", "tag:t2", "tag:t3", "tag:parked", "tag:guest"],
         "dst": ["autogroup:internet"],
         "ip":  ["*"],
     },
+
+    // Tier 3 Pi Zero - Leaf node, initiates nothing
+    // No rules implied - default deny
+
+    // Parked: Desktop and lilmuddpi - no permissions until promoted
+    // No rules implied - default deny
+
     {
+        // Guest: Access only to Gitea port
         "src": ["tag:guest"],
         "dst": ["tag:t1"],
         "ip":  ["tcp:3000"],
     },
+
+    {
+        //Cloud: Oracle cloud server running Canonical Ubuntu 22.04
+        "src": ["tag:cloud"],
+		"dst": ["autogroup:internet"],
+		"ip":  ["*"],
+    }
 ],
 ```
- 
+ *Updated on May 22nd 2026
 ---
  
 *Filed under: homelab/incidents*
