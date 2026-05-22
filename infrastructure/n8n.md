@@ -46,14 +46,15 @@ docker rm -f n8n
 docker run -d \
   --name n8n \
   --network host \
-  -e N8N_HOST=100.114.239.28 \
+  -e N8N_HOST=<TAILSCALE-IP> \
   -e N8N_PROTOCOL=https \
-  -e WEBHOOK_URL=https://100.114.239.28 \
+  -e WEBHOOK_URL=<TAILSCALE-IP> \
   -e N8N_DIAGNOSTICS_ENABLED=false \
   -e N8N_VERSION_NOTIFICATIONS_ENABLED=false \
   -e N8N_HIRING_BANNER_ENABLED=false \
   -e N8N_PERSONALIZATION_ENABLED=false \
   -v /home/mudd-fedora/.n8n:/home/node/.n8n:z \
+  -v /usr/local/bin/muddbuilt:/scripts:z \
   -v /var/log/n8n:/var/log/n8n:z \
   --restart unless-stopped \
   docker.n8n.io/n8nio/n8n:1.111.0
@@ -64,8 +65,9 @@ docker run -d \
 |-----------|---------------|---------|
 | `/home/mudd-fedora/.n8n` | `/home/node/.n8n` | Persists workflows, credentials, and encryption key across restarts |
 | `/var/log/n8n` | `/var/log/n8n` | Persists workflow log output on the host filesystem |
+| '/usr/local/bin/muddbuilt:/scripts:z' | '/scripts' | Exposes MuddBuilt scripts and device config to the container for the network monitor workflow
  
-> **Critical:** Both mounts require the `:z` flag for SELinux compatibility. Without it the container will throw `EACCES: permission denied` and crash-loop on startup.
+> **Critical:** All 3 mounts require the `:z` flag for SELinux compatibility. Without it the container will throw `EACCES: permission denied` and crash-loop on startup.
  
 ---
  
@@ -207,7 +209,7 @@ If n8n ever needs to be rebuilt from scratch:
  
 - [ ] Create host directories (`/home/mudd-fedora/.n8n`, `/var/log/n8n`)
 - [ ] Set ownership: `sudo chown -R 1000:1000 /var/log/n8n`
-- [ ] Run docker command with both `:z` volume mounts
+- [ ] Run docker command with all 3 `:z` volume mounts
 - [ ] Verify container is running: `docker ps | grep n8n`
 - [ ] Confirm `/etc/gitea/app.ini` has `[webhook]` block
 - [ ] Rebuild workflows in n8n UI
