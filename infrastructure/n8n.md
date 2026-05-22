@@ -65,7 +65,7 @@ docker run -d \
 |-----------|---------------|---------|
 | `/home/mudd-fedora/.n8n` | `/home/node/.n8n` | Persists workflows, credentials, and encryption key across restarts |
 | `/var/log/n8n` | `/var/log/n8n` | Persists workflow log output on the host filesystem |
-| '/usr/local/bin/muddbuilt:/scripts:z' | '/scripts' | Exposes MuddBuilt scripts and device config to the container for the network monitor workflow
+| `/usr/local/bin/muddbuilt:/scripts:z` | `/scripts` | Exposes MuddBuilt scripts and device config to the container for the network monitor workflow
  
 > **Critical:** All 3 mounts require the `:z` flag for SELinux compatibility. Without it the container will throw `EACCES: permission denied` and crash-loop on startup.
  
