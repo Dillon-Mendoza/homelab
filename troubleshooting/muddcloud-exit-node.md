@@ -25,7 +25,7 @@ Tailscale routing table confirmed exit node was set and muddcloud was an active 
 **Check if muddcloud is a reachable peer:**
 ```bash
 tailscale status | grep muddcloud
-# active; exit node; direct 161.153.55.136:41641 ← peer active
+# active; exit node; direct <ORACLE-PUBLIC-IP>:41641 ← peer active
 ```
  
 **Check IP forwarding on muddcloud:**
@@ -49,7 +49,7 @@ tailscale status --json | python3 -c "import sys,json; d=json.load(sys.stdin); p
 ```bash
 ip route show table 52
 # default dev tailscale0 ← traffic going through Tailscale
-# 100.69.91.29 dev tailscale0 ← muddcloud peer present
+# <TAILSCALE-IP> dev tailscale0 ← muddcloud peer present
 ```
  
 ---
@@ -76,8 +76,8 @@ muddcloud was retagged from `tag:t2` to `tag:cloud`. Retagging clears all route 
 > **Rule:** Any time you retag a device, immediately check Edit route settings and re-approve legitimate routes.
  
 Oracle also advertises two internal routes that appear as unapproved:
-- `10.0.0.0/24` — Oracle VCN subnet
-- `169.254.169.254/32` — Oracle instance metadata service
+- `xx.x.x.x/24` — Oracle VCN subnet
+- `xxx.xxx.xxx.xxx/32` — Oracle instance metadata service
  
 Do NOT approve these. Leave them unapproved.
  
@@ -90,10 +90,10 @@ The core confusion was IPv4/IPv6 address family mismatch:
 | Scenario | Result |
 |---|---|
 | ThinkPad, no exit node | `2600:387:15:3718::5` (home IPv6) |
-| ThinkPad, muddcloud exit node | `161.153.55.136` (Oracle IPv4) |
-| muddcloud itself | `161.153.55.136` (Oracle IPv4) |
+| ThinkPad, muddcloud exit node | <ORACLE-PUBLIC-IP> (Oracle IPv4) |
+| muddcloud itself | <ORACLE-PUBLIC-IP> (Oracle IPv4) |
  
-`161.153.55.136` appeared in `tailscale status` as muddcloud's direct connection address, causing it to be mistaken for the home IP. The exit node was actually working the entire time.
+<ORACLE-PUBLIC-IP> appeared in `tailscale status` as muddcloud's direct connection address, causing it to be mistaken for the home IP. The exit node was actually working the entire time.
  
 **Always force `-4` when testing exit node routing:**
 ```bash
