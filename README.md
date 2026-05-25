@@ -23,6 +23,7 @@ All devices connected via a **Tailscale mesh** running a tiered default-deny ACL
 
 ## Repository Structure
 
+```
 homelab/
 ├── firewall/          # Per-device firewall hardening runbooks
 ├── incidents/         # Outage write-ups and post-mortems
@@ -30,6 +31,7 @@ homelab/
 ├── linuxplus/         # Linux+ certification study material
 ├── projects/          # Automation and tooling projects
 └── troubleshooting/   # Issue resolution logs
+```
 
 ---
 
