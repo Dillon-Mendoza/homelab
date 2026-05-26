@@ -20,7 +20,7 @@ Gitea is a lightweight self-hosted version control platform running bare metal o
 | Config file | `/etc/gitea/app.ini` |
 | Data directory | `/var/lib/gitea` |
 | Repository root | `/var/lib/gitea/data/gitea-repositories` |
-| Database SQLite3 - `/var/lib/gitea/data/gitea.db` |
+| Database SQLite3 | `/var/lib/gitea/data/gitea.db` |
 | Version | 1.22.6 |
 | HTTP port | `3000` |
 | SSH port | `22` |
