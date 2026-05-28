@@ -60,7 +60,7 @@ def main():
     if report["overall_status"] == "OK":
         sys.exit(0)
     elif report["overall_status"] == "WARN":
-        sys.exit(0)
+        sys.exit(1)
     else:
         sys.exit(2)
 

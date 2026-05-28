@@ -58,7 +58,7 @@ def parse_snapshot(path=SNAPSHOT_PATH):
 def format_uptime(seconds):
     """Convert uptime in seconds to a human-readable string."""
     days = seconds // 86400
-    seconds =% 86400
+    seconds %= 86400
     hours = seconds // 3600
     seconds %= 3600
     minutes = seconds // 60

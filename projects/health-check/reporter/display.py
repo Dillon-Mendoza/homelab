@@ -3,6 +3,7 @@
 # Supports plain text and a compact summary mode.
 
 import datetime
+from collector.parser import format_uptime
 
 STATUS_COLORS = {
     "OK":      "\033[92m",  # green
@@ -80,7 +81,6 @@ def print_report(report, metrics):
     print()
 
     # Uptime line
-    from collector.parser import format_uptime
     uptime_sec = metrics.get("uptime_sec", 0)
     print(f"  Uptime      : {format_uptime(uptime_sec)}")
 
