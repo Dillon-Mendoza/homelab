@@ -7,3 +7,6 @@ logs/*
 # Ignores all .conf files
 *.conf
 draw.io/
+
+__pycache__/
+*.pyc
