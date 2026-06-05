@@ -103,7 +103,7 @@ ip route show table 52
 **What we saw:**
 ```
 default dev tailscale0
-100.70.136.32 dev tailscale0   ← Pi 4 (exit node)
+<tailscale-ip> dev tailscale0   ← Pi 4 (exit node)
 ```
  
 Every device had `default dev tailscale0` — all internet traffic routing through the Pi 4. ACL wasn't permitting that forwarding so traffic disappeared.
@@ -222,7 +222,7 @@ sudo systemctl restart tailscaled && sudo tailscale down && sudo tailscale up
     }
 ],
 ```
- *Updated on May 22nd 2026
+ *Updated on June 5th 2026
 ---
  
 *Filed under: homelab/incidents*

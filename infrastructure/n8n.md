@@ -85,7 +85,7 @@ docker logs n8n --tail 20
 | Method | URL |
 |--------|-----|
 | Local (Fedora server) | `http://127.0.0.1:5678` |
-| Tailscale (any mesh device) | `https://100.114.239.28` (via Tailscale Serve) |
+| Tailscale (any mesh device) | `https://<tailscale-ip>` (via Tailscale Serve) |
  
 > n8n is exposed over HTTPS externally via Tailscale Serve. Internally (Gitea webhooks) it communicates over plain HTTP on localhost — no TLS needed for loopback traffic.
  
@@ -117,7 +117,7 @@ sudo systemctl restart gitea
 ### Webhook URL Format
  
 ```
-http://127.0.0.1:5678/webhook/<production-webhook-key>
+https://<tailscale-ip>:5678/webhook/<production-webhook-key>
 ```
  
 > Always use the **production** webhook URL from n8n, not the test URL. The test URL only works when the listener is manually activated in the canvas.

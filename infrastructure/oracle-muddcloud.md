@@ -24,9 +24,6 @@ Oracle Cloud Free Tier offers genuinely permanent free compute. The Always Free 
 | Network | 0.48 Gbps |
 | OS | Canonical Ubuntu 22.04 |
 | Region | US West (Phoenix) — us-phoenix-1 |
-| Internal IP | <INTERNAL-IP> |
-| Public IP | <PUBLIC-IP> (ephemeral) |
-| Tailscale IP | <TAILSCALE-IP> |
 | Tag | tag:cloud |
  
 ---
