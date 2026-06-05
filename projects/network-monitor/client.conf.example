@@ -1,0 +1,13 @@
+# client.conf.example
+# Copy this file to client.conf and replace with your actual device names and IP addresses.
+# client.conf is gitignored — do not commit the populated file.
+#
+# Format: device-name,xxx.xxx.xxx.xxx
+# - One device per line
+# - Comma-separated: name,IP
+# - No headers, no blank lines
+# - Set permissions after populating: chmod 600 client.conf
+
+device-name,xxx.xxx.xxx.xxx
+device-name,xxx.xxx.xxx.xxx
+device-name,xxx.xxx.xxx.xxx

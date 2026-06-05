@@ -21,6 +21,7 @@ A fully configured device monitoring system that runs on your network and sends 
 On a 15-minute schedule, the system pings every device in your configuration file. If a device responds — nothing happens. If a device is unreachable, you receive a Discord notification immediately identifying the device by name and IP address.
 
 **Discord message format:**
+
 ```
 UNCONFIRMED | device-name | xxx.xxx.xxx.xxx
 ```
@@ -42,9 +43,9 @@ Before setup begins, you'll need to supply the following via the Fiverr intake f
 Your devices are stored in a plain text file (`client.conf`) with one device per line:
 
 ```
-Living Room NAS,192.168.1.50
-Office Desktop,192.168.1.51
-Security Camera Hub,192.168.1.52
+device-name,xxx.xxx.xxx.xxx
+device-name,xxx.xxx.xxx.xxx
+device-name,xxx.xxx.xxx.xxx
 ```
 
 **To add or remove a device** — edit this file. No changes to the workflow required.
