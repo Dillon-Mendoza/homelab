@@ -11,9 +11,9 @@
 | Week | Topic | Content Generated | Session A Done | Session B Done | Tested |
 |------|-------|:-----------------:|:--------------:|:--------------:|:------:|
 | 1  | File Permissions & Ownership Pt 1     | ☑ | ☐ | ☐ | ☐ |
-| 2  | File Permissions & Ownership Pt 2     | ☐ | ☐ | ☐ | ☐ |
-| 3  | User & Group Management Pt 1          | ☐ | ☐ | ☐ | ☐ |
-| 4  | User & Group Management Pt 2          | ☐ | ☐ | ☐ | ☐ |
+| 2  | File Permissions & Ownership Pt 2     | ☑ | ☐ | ☐ | ☐ |
+| 3  | User & Group Management Pt 1          | ☑ | ☐ | ☐ | ☐ |
+| 4  | User & Group Management Pt 2          | ☑ | ☐ | ☐ | ☐ |
 | 5  | SSH Key Authentication Pt 1           | ☐ | ☐ | ☐ | ☐ |
 | 6  | SSH Key Authentication Pt 2           | ☐ | ☐ | ☐ | ☐ |
 | 7  | Systemd & Services Pt 1               | ☐ | ☐ | ☐ | ☐ |
