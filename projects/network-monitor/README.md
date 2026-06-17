@@ -16,7 +16,7 @@ Schedule Trigger (15 min)
             ↓
 Execute Command Node
             ↓
-    → sh /scripts/monitor.sh
+    → sh /scripts/muddbuilt/monitor.sh
             ↓
 Code Node
     → Parse stdout, filter UNCONFIRMED lines, format for n8n
@@ -32,7 +32,7 @@ HTTP Request Node
 - **n8n** — running as Docker container on Fedora KVM/QEMU VM (Dell Server `tag:t1`)
 - **Docker image** — `docker.n8n.io/n8nio/n8n:1.111.0`
 - **Network mode** — `--network host` (required for Tailscale mesh access)
-- **Script mount** — `/usr/local/bin/muddbuilt` on host → `/scripts` in container (`:z` SELinux flag)
+- **Script mount** — `/usr/local/bin/muddlabs` on host → `/scripts` in container (`:z` SELinux flag)
 - **Shell** — `sh` (bash not available inside n8n container)
 - **Tailscale ACL** — `tag:t1` dst updated to include `tag:t1` and `tag:cloud` for ICMP
 
@@ -54,7 +54,7 @@ docker run -d \
     -e N8N_PERSONALIZATION_ENABLED=false \
     -v /home/<user>/.n8n:/home/node/.n8n:z \
     -v /var/log/n8n:/var/log/n8n:z \
-    -v /usr/local/bin/muddbuilt:/scripts:z \
+    -v /usr/local/bin/muddlabs:/scripts:z \
     --restart unless-stopped \
     docker.n8n.io/n8nio/n8n:1.111.0
 ```
@@ -65,14 +65,14 @@ docker run -d \
 
 | File | Location (Host) | Location (Container) | Purpose |
 |---|---|---|---|
-| `monitor.sh` | `/usr/local/bin/muddbuilt/monitor.sh` | `/scripts/monitor.sh` | Ping check script |
-| `client.conf` | `/usr/local/bin/muddbuilt/client.conf` | `/scripts/client.conf` | Device list |
+| `monitor.sh` | `/usr/local/bin/muddlabs/muddbuilt/monitor.sh` | `/scripts/muddbuilt/monitor.sh` | Ping check script |
+| `client.conf` | `/usr/local/bin/muddlabs/muddbuilt/client.conf` | `/scripts/muddbuilt/client.conf` | Device list |
 
 ### Permissions
 
 ```bash
-chmod +x /usr/local/bin/muddbuilt/monitor.sh
-chmod 600 /usr/local/bin/muddbuilt/client.conf
+chmod +x /usr/local/bin/muddlabs/muddbuilt/monitor.sh
+chmod 600 /usr/local/bin/muddlabs/muddbuilt/client.conf
 ```
 
 ---
@@ -91,7 +91,7 @@ while IFS= read -r line; do
     else
         echo "UNCONFIRMED | $device | $ip"
     fi
-done < /scripts/client.conf
+done < /scripts/muddbuilt/client.conf
 ```
 
 **Line by line:**
@@ -154,7 +154,7 @@ ICMP is not implicitly allowed — it must be covered by an `"ip": ["*"]` rule. 
 ## Known Constraints
 
 - `bash` is not available inside the n8n Docker container — script must use `#!/bin/sh` and POSIX-compatible syntax
-- `client.conf` path must be absolute (`/scripts/client.conf`) — relative paths fail due to n8n's working directory being outside the mount
+- `client.conf` path must be absolute (`/scripts/muddbuilt/client.conf`) — relative paths fail due to n8n's working directory being outside the mount
 - Script volume mount requires `:z` SELinux flag on Fedora host
 
 ---
