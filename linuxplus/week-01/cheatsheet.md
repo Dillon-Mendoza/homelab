@@ -1,47 +1,292 @@
-# Week 1: Phase 1 — File Permissions & Ownership Pt 1
-
-## Overview: The rwx Foundation
-Permissions in Linux are the gatekeepers. If you don't understand these, you don't own the system.
-
-### The Permission String
-`ls -l` reveals the 10-character string: `-rwxr-xr-x`
-- `1st char`: Type (`-` file, `d` directory, `l` link)
-- `2-4`: User (Owner)
-- `5-7`: Group
-- `8-10`: Others (The World)
-
-### Symbolic vs. Octal
-| Mode | Symbolic | Octal | Binary | Meaning |
-| :--- | :--- | :--- | :--- | :--- |
-| **Read** | `r` | `4` | `100` | View content (file) / List entries (dir) |
-| **Write** | `w` | `2` | `010` | Edit content (file) / Add/Delete entries (dir) |
-| **Execute** | `x` | `1` | `001` | Run as program (file) / CD into (dir) |
-
-**Example:** `chmod 755` → `rwxr-xr-x` (Owner: all, Group/Others: read/execute)
-
-### The "Directory Trap"
-- **Execute (x) on a directory:** You need this to `cd` into it or access files inside. Without `x`, `r` lets you see names but not metadata (size/owner).
-- **Write (w) on a directory:** This allows **deleting** files inside, even if you don't own the files themselves.
+# Week 01 — Linux Fundamentals + Shell Operations
+# Domain: 1.0 System Management (23%) | Objectives: 1.1, 1.5
+# Calendar: Jun 29–Jul 5 | Session A — 45 min read
 
 ---
 
-## Real-World Homelab Context
-- **ThinkPad (t0):** Your SSH keys in `~/.ssh/` *must* be `600` (rw-------). If they are world-readable, SSH will refuse to use them.
-- **Gitea (t1):** The data directories require specific ownership (`git:git`) and permissions for the service to write logs and repos.
+## Objective 1.1 — Basic Linux Concepts
+
+### Boot Process
+
+The boot sequence has five stages. Know what each does and what failure looks like at each.
+
+**Stage 1 — BIOS/UEFI**
+Firmware runs first. BIOS is legacy (MBR partitioning). UEFI is modern (GPT partitioning, Secure Boot).
+UEFI stores boot entries — this is why `efibootmgr` can change boot order without a physical menu.
+
+**Stage 2 — Bootloader (GRUB2)**
+GRUB loads the kernel. Two config files — know which one you edit:
+- `/etc/default/grub` → user-editable parameters (GRUB_TIMEOUT, GRUB_CMDLINE_LINUX)
+- `/boot/grub2/grub.cfg` → generated file, never edit directly
+- `/etc/grub.d/` → scripts that build grub.cfg
+
+After editing `/etc/default/grub`:
+- Fedora/RHEL: `grub2-mkconfig -o /boot/grub2/grub.cfg`
+- Ubuntu: `update-grub`
+
+Common kernel parameters passed via GRUB_CMDLINE_LINUX:
+- `quiet` — suppress most boot messages
+- `splash` — show splash screen
+- `rd.break` — drop to emergency shell before initrd hands off to systemd (Fedora)
+- `init=/bin/bash` — bypass init entirely, get root shell (dangerous, no services)
+- `systemd.unit=rescue.target` — boot to rescue mode
+
+**Stage 3 — Kernel**
+Kernel decompresses itself, initializes hardware, mounts initrd as temporary root filesystem.
+Kernel parameters are visible at runtime: `cat /proc/cmdline`
+
+**Stage 4 — initrd (Initial RAM Disk)**
+Temporary filesystem loaded into RAM. Contains just enough drivers and tools to mount the real root filesystem.
+Lives at `/boot/initramfs-$(uname -r).img` (Fedora) or `/boot/initrd.img-$(uname -r)` (Ubuntu).
+Built with `dracut` (Fedora) or `mkinitramfs` (Ubuntu).
+
+**Stage 5 — systemd (PID 1)**
+First real process. Reads unit files, brings up targets, starts services.
+`systemctl get-default` — shows default target (usually `graphical.target` or `multi-user.target`)
+
+**PXE Boot (Network Boot)**
+Sequence: DHCP (gets IP + TFTP server address) → TFTP (downloads bootloader) → bootloader loads kernel+initrd from network.
+Used for diskless stations and automated provisioning. No local storage needed for boot.
 
 ---
 
-## Quick Recall (Flashcard Style)
-- `chmod 644`: Standard file (Owner: rw, Group/Other: r)
-- `chmod 755`: Standard directory/executable (Owner: rwx, Group/Other: rx)
-- `chmod 400`: Read-only for owner (common for private keys)
-- `chown user:group`: Change both owner and group at once
-- `ls -ld`: View permissions of the directory itself, not its contents
-- `r` on dir: Allows `ls` to work
-- `x` on dir: Allows `cd` to work
-- `w` on dir: Allows `rm` and `touch` to work
-- `stat -c %a`: Show octal permissions of a file
-- `chmod -R`: Recursive permission change (use with caution)
-- `umask`: Defines default permissions for new files
-- `symbolic +x`: `chmod +x script.sh` (adds execute to all)
-- `symbolic u+w`: Add write only for the owner
+### Filesystem Hierarchy Standard (FHS)
+
+Know every top-level directory and its exact purpose. Exam questions test this directly.
+
+| Directory | Purpose | Key detail |
+|-----------|---------|------------|
+| `/` | Root — everything starts here | Partition must contain enough to boot |
+| `/bin` | Essential user binaries | `ls`, `cp`, `cat` — needed in single-user mode |
+| `/sbin` | Essential system binaries | `fdisk`, `ip`, `mount` — root-level tools |
+| `/boot` | Bootloader + kernel + initrd | Do not fill this partition — GRUB will fail |
+| `/dev` | Device files | Block devices (`/dev/sda`), char devices (`/dev/tty`), created by udev |
+| `/etc` | System configuration files | Text files, no binaries. `/etc/fstab`, `/etc/hosts`, `/etc/passwd` |
+| `/home` | User home directories | `/home/tp-mudd` on this machine |
+| `/lib` | Shared libraries for /bin and /sbin | `/lib64` on 64-bit systems |
+| `/proc` | Virtual filesystem — kernel/process info | Not real files. `cat /proc/cpuinfo`, `cat /proc/meminfo`. Changes don't persist. |
+| `/tmp` | Temporary files | Cleared on reboot (usually). World-writable with sticky bit. |
+| `/usr` | User programs and data | `/usr/bin`, `/usr/lib`, `/usr/share`. Largest directory on most systems. |
+| `/var` | Variable data — changes at runtime | Logs (`/var/log`), spool, cache, runtime data |
+
+**Critical distinction:** `/proc` is virtual — it exists only in memory, generated by the kernel on the fly. Writing to it changes kernel behavior at runtime but nothing persists after reboot. This is how `sysctl` works (`/proc/sys/` entries).
+
+---
+
+### Server Architectures
+
+| Architecture | Full Name | Where You'll See It |
+|---|---|---|
+| x86 | 32-bit Intel/AMD | Legacy systems only |
+| x86_64 / AMD64 | 64-bit Intel/AMD | `tp-mudd`, `dell-ubuntu`, `mudd-cloud` — all your servers |
+| AArch64 | ARM 64-bit | `muddpi` (Pi 4), `pi-zero` (Pi Zero 2W) |
+| RISC-V | Open ISA, version 5 | Emerging — single-board computers, not yet mainstream in production |
+
+Verify your architecture: `uname -m` returns `x86_64` or `aarch64`
+
+---
+
+### Distributions
+
+Two package management families — know the toolchain for each:
+
+**RPM-based:** Fedora, RHEL, Rocky Linux, AlmaLinux, CentOS
+- Package format: `.rpm`
+- Low-level tool: `rpm`
+- High-level tool: `dnf` (modern), `yum` (legacy)
+- Repo config: `/etc/yum.repos.d/`
+- Your devices: `tp-mudd` (Fedora 44), `dell-fedora` (Fedora 43)
+
+**dpkg-based:** Debian, Ubuntu, Raspberry Pi OS
+- Package format: `.deb`
+- Low-level tool: `dpkg`
+- High-level tool: `apt`
+- Repo config: `/etc/apt/sources.list`, `/etc/apt/sources.list.d/`
+- Your devices: `dell-ubuntu` (Ubuntu 24.04), `muddpi`, `pi-zero` (Pi OS)
+
+You run both families in your homelab. This is an advantage — the exam tests both.
+
+---
+
+### GUI Components (Know the Vocabulary)
+
+Not heavily tested but terminology appears in questions:
+
+- **Display manager** — handles login screen, starts user sessions (GDM, LightDM, SDDM)
+- **Window manager** — controls window placement and decoration (Mutter, Openbox)
+- **X Server** — older display system (X11/Xorg), network-transparent
+- **Wayland** — modern replacement for X11, better security, compositor-based. Fedora 44 uses Wayland by default.
+
+---
+
+### Software Licensing
+
+| License type | Meaning | Example |
+|---|---|---|
+| Open source | Source available, OSI-approved license | Apache, MIT, BSD |
+| Free software | Four freedoms: run, study, share, modify (FSF definition) | GPL, LGPL |
+| Copyleft | Derivative works must use same license | GPL — if you use GPL code, your code must also be GPL |
+| Proprietary | Closed source, usage restricted by EULA | VMware, most commercial software |
+
+**Exam trap:** "Free software" and "open source" are not the same thing. Free software (FSF) emphasizes user freedom. Open source emphasizes development methodology. Most GPL software is both, but the definitions differ.
+
+---
+
+## Objective 1.5 — Shell Operations
+
+### Environment Variables
+
+Variables that configure shell and process behavior. Inherited by child processes.
+
+| Variable | Purpose | Check it |
+|---|---|---|
+| `PATH` | Colon-separated list of directories searched for commands | `echo $PATH` |
+| `HOME` | Current user's home directory | `echo $HOME` → `/home/tp-mudd` |
+| `SHELL` | Path to current shell binary | `echo $SHELL` → `/bin/bash` |
+| `USER` | Current username | `echo $USER` |
+| `PS1` | Prompt string — what you see before the cursor | `echo $PS1` |
+| `DISPLAY` | X display server address for GUI apps | `echo $DISPLAY` → `:0` |
+
+Set a variable: `MYVAR=value` (no spaces around `=`)
+Export to child processes: `export MYVAR=value`
+See all variables: `env` or `printenv`
+
+---
+
+### Shell Config Files — Which Loads When
+
+This is an exam topic. The wrong file being edited is a common real-world mistake too.
+
+| File | When it loads | Use it for |
+|---|---|---|
+| `~/.bash_profile` | Login shell (SSH sessions, TTY login) | Set `PATH`, export variables once at login |
+| `~/.bashrc` | Interactive non-login shell (new terminal window) | Aliases, functions, prompt |
+| `~/.profile` | Login shell if `.bash_profile` doesn't exist | Fallback, also used by sh |
+| `/etc/profile` | System-wide login shell config | Affects all users |
+| `/etc/profile.d/*.sh` | System-wide, loaded by `/etc/profile` | Package-installed additions to PATH |
+
+**Rule:** SSH into `dell-ubuntu` → `.bash_profile` loads. Open a new terminal tab on `tp-mudd` → `.bashrc` loads.
+**Common fix:** Put aliases in `.bashrc`. Source `.bashrc` from `.bash_profile` so both get them.
+
+---
+
+### Paths
+
+| Path type | Syntax | Example |
+|---|---|---|
+| Absolute | Starts with `/` | `/etc/ssh/sshd_config` |
+| Absolute (home shortcut) | Starts with `~` | `~/.bashrc` = `/home/tp-mudd/.bashrc` |
+| Relative (current dir) | Starts with `.` | `./script.sh` |
+| Relative (parent dir) | Starts with `..` | `../other-project/file.txt` |
+| Previous directory | `-` | `cd -` returns to last directory |
+
+---
+
+### Channel Redirection
+
+| Operator | What it does | Example |
+|---|---|---|
+| `>` | Redirect stdout, overwrite | `ls > files.txt` |
+| `>>` | Redirect stdout, append | `echo "line" >> log.txt` |
+| `<` | Redirect file to stdin | `wc -l < /etc/passwd` |
+| `2>` | Redirect stderr | `find / -name foo 2> /dev/null` |
+| `2>>` | Append stderr | `cmd 2>> errors.log` |
+| `2>&1` | Merge stderr into stdout | `cmd > output.txt 2>&1` |
+| `&>` | Redirect both stdout and stderr | `cmd &> all-output.txt` |
+| `\|` | Pipe stdout of left to stdin of right | `ps aux \| grep sshd` |
+| `<<< "string"` | Pass string as stdin (herestring) | `wc -w <<< "hello world"` |
+| `<< EOF` | Heredoc — multi-line stdin | Used in scripts for multi-line input |
+
+**Exam trap:** `2>&1` must come AFTER the output redirect. `cmd > file 2>&1` works. `cmd 2>&1 > file` does not redirect stderr to file — it redirects stderr to wherever stdout was pointing at that moment (the terminal), then redirects stdout to file.
+
+---
+
+### Core Shell Utilities
+
+**Text search and processing:**
+
+`grep` — search for pattern in files or stdin
+- `grep "sshd" /var/log/auth.log` — find lines with sshd
+- `grep -r "PasswordAuthentication" /etc/ssh/` — recursive search
+- `grep -v "^#" /etc/ssh/sshd_config` — exclude comment lines
+- `grep -c "Failed" /var/log/auth.log` — count matching lines
+- `grep -n "Port" /etc/ssh/sshd_config` — show line numbers
+
+`awk` — field-based text processing
+- `awk -F: '{print $1}' /etc/passwd` — print first field (username), colon delimiter
+- `awk '{print $1, $4}' /var/log/syslog` — print fields 1 and 4
+- `ps aux | awk '{print $1, $11}'` — print user and command columns
+
+`sed` — stream editor, find and replace
+- `sed 's/old/new/' file` — replace first occurrence per line
+- `sed 's/old/new/g' file` — replace all occurrences
+- `sed -n '5,10p' file` — print lines 5–10
+- `sed '/^#/d' /etc/ssh/sshd_config` — delete comment lines
+
+**File inspection:**
+
+`find` — search filesystem by criteria
+- `find /etc -name "*.conf"` — find all .conf files under /etc
+- `find /var/log -mtime -1` — files modified in last 24 hours
+- `find / -perm -4000 2>/dev/null` — find all SUID files (exam-relevant)
+- `find /home -user tp-mudd -type f` — files owned by tp-mudd
+- `find /tmp -type f -exec rm {} \;` — delete all files in /tmp
+
+`head` / `tail` — first/last N lines (default 10)
+- `tail -f /var/log/syslog` — follow log in real time
+- `tail -n 50 /var/log/dnf.log` — last 50 lines
+
+`wc` — count lines, words, bytes
+- `wc -l /etc/passwd` — count users
+- `cat /etc/group | wc -l` — count groups
+
+**Text transformation:**
+
+`cut` — extract columns from delimited text
+- `cut -d: -f1,3 /etc/passwd` — extract username and UID
+
+`sort` — sort lines
+- `sort -n` — numeric sort
+- `sort -r` — reverse
+- `sort -u` — unique (deduplicate)
+
+`uniq` — remove duplicate adjacent lines (use after `sort`)
+- `sort file | uniq -c` — count occurrences of each line
+
+`tr` — translate or delete characters
+- `echo "HELLO" | tr 'A-Z' 'a-z'` — lowercase
+- `tr -d '\r' < windows-file.txt` — strip carriage returns
+
+`tee` — write to file AND pass through to stdout
+- `journalctl -b | tee boot.log | grep -i error` — save and filter simultaneously
+
+`xargs` — build commands from stdin
+- `find /tmp -name "*.tmp" | xargs rm` — delete found files
+- `cat hostlist.txt | xargs -I {} ssh {} uptime` — run command per host
+
+**Text editors (know both exist, know basic navigation):**
+
+`vim` — modal editor. Normal mode → `i` to insert → `Esc` back to normal → `:wq` save and quit, `:q!` quit without saving
+`nano` — non-modal, always in insert mode. `Ctrl+O` save, `Ctrl+X` exit
+
+---
+
+## Quick Recall
+
+Test yourself after the read. Cover the right column and answer from the left.
+
+`/proc` — virtual filesystem, kernel/process info, changes don't persist  
+`/var` — variable runtime data: logs, spool, cache  
+`/etc` — system configuration, text files only, no binaries  
+`~/.bashrc` — loads for interactive non-login shells (new terminal tabs)  
+`~/.bash_profile` — loads for login shells (SSH sessions)  
+`2>&1` — merge stderr into stdout stream  
+`find / -perm -4000` — locate all SUID files on system  
+`grep -r "pattern" /dir/` — recursive search through directory  
+`tail -f /var/log/syslog` — follow log file in real time  
+`uname -m` — print machine architecture (x86_64, aarch64)  
+`cat /proc/cmdline` — show kernel parameters used at boot  
+`grub2-mkconfig -o /boot/grub2/grub.cfg` — regenerate GRUB config (Fedora)  
+`update-grub` — regenerate GRUB config (Ubuntu/Debian)  
+`export VAR=value` — set variable and make available to child processes  
+AArch64 — 64-bit ARM architecture, what muddpi and pi-zero run  

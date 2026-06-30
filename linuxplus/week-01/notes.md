@@ -1,25 +1,98 @@
-# Week 1 Reference & Notes
+# Week 01 — Reference Notes
+# Objectives: 1.1, 1.5 | Calendar: Jun 29–Jul 5
+
+---
 
 ## Exam Objective Mapping
-- **CompTIA Linux+ XK0-005: 2.1** — Given a scenario, manage files and directories.
-  - Permissions (rwx)
-  - Ownership (chown)
-  - Directory permissions vs. file permissions
 
-## Essential Man Pages
-- `man chmod` — Pay attention to the "SETUID AND SETGID BITS" section.
-- `man chown` — Review the `--reference` flag for copying ownership between files.
-- `man ls` — Review `-i` (inodes) and `-d` (directory info).
+**1.1 — Explain basic Linux concepts**
+- Basic boot process: Bootloader (configuration files), Kernel (parameters), initrd, PXE
+- Filesystem Hierarchy Standard (FHS): all top-level directories
+- Server architectures: AArch64, RISC-V, x86, x86_64/AMD64
+- Distributions: RPM-based, dpkg-based
+- Graphical User Interface: Display managers, Window managers, X Server, Wayland
+- Software licensing: Opensource, Free software, Proprietary, Copyleft
 
-## Curated Resources
-- [LearnLinuxTV: Linux Permissions Explained](https://www.youtube.com/watch?v=yYfI79UvOXY)
-- [Professor Messer: Linux Permissions (XK0-005)](https://www.professormesser.com/)
-- [Arch Wiki: File Permissions](https://wiki.archlinux.org/title/File_permissions_and_attributes)
+**1.5 — Given a scenario, manage a Linux system using common shell operations**
+- Common environmental variables: DISPLAY, HOME, PATH, PS1, SHELL, USER
+- Paths: Absolute (~, /), Relative (., .., -)
+- Shell environment configurations: .bashrc, .bash_profile, .profile
+- Channel redirection: <, >, <<, >>, |, stdout, stderr, stdin, heredocs <<<
+- Basic shell utilities: !, !!, alias, awk, bc, cat, cut, echo, grep, head, history, less, more, printf, sed, sort, source, tail, tee, tr, uname, uniq, wc, xargs
+- Text editors: vi/vim, nano
 
-## Things That Trip People Up (Gotchas)
-1. **The 'w' on Dirs:** If a user has `w` and `x` on a directory, they can delete any file in it, even if they don't own the file and have no permissions on the file itself. This is why `/tmp` uses the "Sticky Bit" (more on that in Week 2).
-2. **Read vs. Execute on Dirs:** If you have `r` but no `x`, you can `ls` the directory but you'll get errors for file sizes and types (displayed as `?`). You cannot `cd` or open files inside.
-3. **Octal Math:** It's easy to flip 4 (read) and 2 (write) under pressure. Remember: Read=4, Write=2, Execute=1. (4-2-1).
+---
+
+## Key Man Pages
+
+`man hier` — Read this. It's the FHS reference page built into every Linux system. Section by section covers what belongs in each directory and why. Faster than googling.
+
+`man bash` — Enormous, but search it. `/INVOCATION` section explains exactly when .bashrc vs .bash_profile loads. `/REDIRECTION` section covers every operator with examples.
+
+`man find` — Read the `-perm` section carefully. The difference between `-perm 4000`, `-perm -4000`, and `-perm /4000` trips people up. `-4000` means "at least these bits set."
+
+`man grep` — Focus on `-r` (recursive), `-v` (invert match), `-c` (count), `-n` (line numbers), `-E` (extended regex). These flags appear in exam scenarios.
+
+`man 5 hier` — Same as `man hier` on some systems. The `5` refers to the manual section for file formats and conventions.
+
+---
+
+## Video Reference
+
+**Theory Course (12hr — nGPK6YBbKpg):**
+Search for the section covering "Linux Fundamentals" or "System Management" at the start of the course. Topics to match: boot process, FHS, distributions, shell operations. Watch before or during Session A.
+
+**Labs Course (7hr — JXIaR23OdB8):**
+Look for the section on shell operations and filesystem navigation. Run alongside lab-script.sh during Session B for additional context on find, grep, and redirection.
+
+---
+
+## Book Reference — How Linux Works, 3rd Ed. (Ward)
+
+Use this alongside Session A, not instead of the cheatsheet. The cheatsheet tells you what. The book explains why.
+
+**Ch. 1 — The Big Picture**
+Read this once, early. It establishes the kernel/user space boundary that every other topic in this sprint sits on: why user programs can't touch hardware directly, what the kernel actually manages (processes, memory, device drivers, system calls), and how those layers communicate. If `/proc` not being a "real" filesystem doesn't click yet, this chapter fixes it.
+
+**Ch. 5 — How the Linux Kernel Boots**
+The mechanism behind the boot stage sequence in the cheatsheet. Explains what GRUB is actually doing when it loads the kernel, why initramfs needs to exist before the real root filesystem is accessible, and what happens between kernel decompression and PID 1. Read this before Session A — the boot stages stop being a list and become a chain of dependencies.
+
+**Ch. 6 — How User Space Starts**
+Covers systemd's role as PID 1 in depth — how it reads unit files, how targets chain together, and why `multi-user.target` vs `graphical.target` matters. Directly supports the gotcha about `systemctl get-default` and boot target selection.
+
+**Ch. 2 — Basic Commands and Directory Hierarchy**
+The FHS section adds historical context for why directories are structured the way they are. Covers the same ground as `man hier` but with more explanation. Use if any FHS entry in the cheatsheet doesn't make intuitive sense.
+
+**Ch. 13 — User Environments**
+Explains the load order for `.bashrc` vs `.bash_profile` from first principles. If the shell config table in the cheatsheet doesn't fully click, Ch. 13 has the mechanism.
+
+---
+
+## Things That Trip People Up
+
+**1. .bashrc vs .bash_profile — the most common config mistake**
+SSH login loads `.bash_profile`. Opening a new terminal in a GUI loads `.bashrc`. If you add an alias to `.bashrc` and it doesn't work over SSH, this is why. The fix: add `source ~/.bashrc` inside `.bash_profile` so both paths load the same config.
+
+**2. /proc is not a real filesystem**
+Everything in `/proc` is generated by the kernel on demand. `cat /proc/cpuinfo` doesn't read a file — it asks the kernel to generate that output in real time. This means: you can't back it up, size is always 0, and changes (like writing to `/proc/sys/`) only persist until reboot.
+
+**3. 2>&1 ordering matters**
+`cmd > file 2>&1` — correct. Redirects stdout to file, then redirects stderr to where stdout currently points (the file).
+`cmd 2>&1 > file` — wrong. Redirects stderr to where stdout currently points (terminal), then redirects stdout to file. Stderr still goes to terminal.
+
+**4. GRUB config — edit the right file**
+`/boot/grub2/grub.cfg` is generated. Never edit it directly — your changes get overwritten next time grub2-mkconfig runs. Edit `/etc/default/grub` and regenerate. On Fedora: `grub2-mkconfig -o /boot/grub2/grub.cfg`. On Ubuntu: `update-grub`.
+
+**5. find -perm modes**
+- `-perm 4000` — exactly 4000, nothing else set
+- `-perm -4000` — 4000 bit must be set, other bits can be anything (what you want for SUID search)
+- `-perm /4000` — any of the specified bits set (OR logic)
+
+**6. Free software ≠ free of charge**
+"Free software" (FSF definition) means free as in freedom, not price. GPL software can be sold. The four freedoms: run it, study it, distribute it, modify and distribute modifications. The exam may test this distinction.
+
+---
 
 ## Connect to the Homelab
-You are already using these concepts on the **Pi Zero 2 W (t3)** bastion host. To keep that device secure as the "gatekeeper," we ensure that log files are only readable by the root or specialized audit groups. Your work here in Week 1 is what ensures that a compromise of a low-privilege user doesn't immediately result in a read of the entire system's history.
+
+This week's material is the foundation everything else in your homelab runs on — you've been using it without the formal vocabulary. Both distro families are live: `tp-mudd` and `dell-fedora` are RPM-based (Fedora, `dnf`), while `dell-ubuntu`, `muddpi`, and `pi-zero` are dpkg-based (Ubuntu/Pi OS, `apt`). When you SSH from `tp-mudd` into `dell-ubuntu`, you're crossing distro families — different package managers, different GRUB config commands, different default paths for some services. The FHS is the same on both because it's a standard, not a distro choice. And `muddpi` and `pi-zero` running AArch64 means you've been managing a multi-architecture environment — the same Linux skills apply, but the compiled binaries are not interchangeable between your x86_64 servers and your ARM Pi nodes.

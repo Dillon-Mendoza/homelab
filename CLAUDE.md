@@ -89,24 +89,31 @@ SSH over `tailscale0` interface — intentional. Keeps key management as a pract
 ## Linux+ Study System
 
 **Target date:** Week of September 14, 2026
-**Certification:** CompTIA Linux+
+**Certification:** CompTIA Linux+ XK0-006 V8
 
 **Study system architecture:**
-- Google Calendar Sunday planning ritual → two 45–60 min sessions/week scheduled against posted work schedule
-- Gemini CLI generates content from `topic-map.md` (19-week curriculum)
+- Sunday ritual → two 45–60 min blocks scheduled in Google Calendar against posted work schedule
+- Claude generates weekly content (cheatsheet, lab script, audit script, notes) from topic-map.md
 - Claude validates via topic-specific test-outs → pass advances, repeat targets specific gap
 
 **Key files:**
 ```
-homelab/linux-plus/
-├── GEMINI.md         # Gemini CLI prompt instructions
-├── topic-map.md      # 19-week curriculum
-└── linux-plus-testouts.md  # Test-out records
+homelab/linuxplus/
+├── curriculum.md       # Complete XK0-006 objective reference (all 29 objectives)
+├── topic-map.md        # 11-week sprint plan with session goals and progress tracker
+├── sunday-ritual.md    # Weekly planning template — open every Sunday
+├── study-protocol.md   # Claude content generation instructions and test-out protocol
+└── week-NN/            # Generated per week: cheatsheet.md, lab-script.sh, audit-script.sh, notes.md
 ```
 
-**Known failure point:** Sunday planning ritual — executed once, never repeated. This is the broken link in the system. Every week must start with the Sunday ritual or the schedule collapses.
+**Invocation:**
+- `"Generate week [N] content"` — Claude writes four files into week-NN/
+- `"Test me out on week [N]"` — Claude runs 8–10 question test-out, returns pass or repeat
+- `"Mark week [N] session [A/B] complete"` — Claude updates progress tracker
 
-**Status:** Significantly behind. September deadline is real.
+**Known failure point:** Sunday ritual — executed once, never repeated. The ritual is the broken link. Every week must start with it or the schedule collapses.
+
+**Status:** Sprint begins June 29, 2026. Exam September 14, 2026. 11 weeks.
 
 ---
 
