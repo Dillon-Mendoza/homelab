@@ -37,14 +37,6 @@ homelab/
 
 ## Projects
 
-### Muddroom — Homelab Dashboard
-A Django web application serving as a live dashboard for the Mudd Labs mesh.
-Displays device reachability, service status, and infrastructure health pulled
-from the Tailscale network. Served over `tailscale serve` with HTTPS. Built
-as a deliberate portfolio piece — chose Django over pre-built tools (Uptime
-Kuma, Dashy) specifically to build real Python web development experience.
-→ Active development
-
 ### Pi-hole DNS Filtering (tag:dns)
 Pi-hole running on the Pi Zero 2W as a dedicated DNS resolver for the
 Tailscale mesh. Custom upstream resolver under Tailscale MagicDNS — all
@@ -101,6 +93,6 @@ local log file. First real automation built on this stack.
 
 Mudd Labs is the brand I built this work under. The mission is simple:
 *rooted in craft, reaching past the last mark.* I'm not trying to pass
-a test and land a job title — I'm building real infrastructure, documenting
+a test and land a job title; I'm building real infrastructure, documenting
 it to production standard, and shipping tools that solve actual problems.
 The portfolio speaks for itself or it doesn't. I'm betting on it.
