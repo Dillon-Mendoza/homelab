@@ -43,8 +43,8 @@ These answer "what hardware does this box actually have" — a constant sysadmin
 | Command | Shows | Homelab use |
 |---|---|---|
 | `lscpu` | CPU architecture, cores, threads, flags, virtualization support | Confirm `tp-mudd`'s AMD CPU exposes `svm` (AMD-V) before enabling KVM |
-| `lsmem` | Installed RAM, memory blocks, online/offline ranges | Check total vs. usable RAM on `dell-ubuntu` |
-| `lspci` | PCI bus devices — NICs, GPUs, storage controllers | Identify the disk controller on `dell-ubuntu` (`lspci \| grep -i sata` or `-i raid`) |
+| `lsmem` | Installed RAM, memory blocks, online/offline ranges | Check total vs. usable RAM on `tp-mudd` |
+| `lspci` | PCI bus devices — NICs, GPUs, storage controllers | Identify `tp-mudd`'s NVMe controller (`lspci \| grep -i nvme`) and wifi NIC |
 | `lsusb` | USB bus devices | Confirm a USB drive enumerated before you try to mount it |
 | `lshw` | Full hardware tree — CPU, memory, storage, network in one report | `sudo lshw -short` for a fast top-level summary |
 | `dmesg` | Kernel ring buffer — boot-time and runtime hardware events | `dmesg -T \| grep -i usb` right after plugging in a drive |
@@ -56,7 +56,7 @@ These answer "what hardware does this box actually have" — a constant sysadmin
 
 ### Sensors and IPMI
 
-- `lm_sensors` — package providing `sensors` command. Run `sensors-detect` once to probe hardware, then `sensors` reports CPU temp, fan speed, voltages. Relevant on `dell-ubuntu` where thermal headroom matters more than on a laptop with built-in throttling.
+- `lm_sensors` — package providing `sensors` command. Run `sensors-detect` once to probe hardware, then `sensors` reports CPU temp, fan speed, voltages. On `tp-mudd` it reads the ThinkPad's thermal sensors directly (`thinkpad_isa` adapter) — run it under load and watch the CPU temp move.
 - `ipmitool` — talks to a server's dedicated management controller (BMC), out-of-band from the OS. `ipmitool sensor list` reads temps/fans/power even if the OS is unresponsive. Only relevant to server-class hardware with a BMC — not `tp-mudd`.
 - `nvtop` — `htop`-style live view for GPU utilization. Only useful if a GPU is present; not applicable to any current homelab node but appears in the objective list.
 
@@ -103,12 +103,7 @@ xfs_growfs /mount/point                    # xfs — same idea, but takes a MOUN
 ```
 Growing the LV does not grow the filesystem inside it. Forgetting the second command is the most common real-world LVM mistake and a direct exam question. Also note `xfs_growfs` takes the **mountpoint**, while `resize2fs` takes the **device path** — that inconsistency is tested.
 
-On `dell-ubuntu`, inspect the real stack instead of a hypothetical one:
-```
-sudo pvdisplay
-sudo vgdisplay
-sudo lvdisplay
-```
+In Session B you build this entire stack yourself on `tp-mudd` from loop devices — `pvcreate → vgcreate → lvcreate → mkfs → mount → lvextend → teardown`. Every command in the table above gets run for real against disks you create, so nothing here stays hypothetical. Zero risk to the laptop's real disk: the "disks" are files in `/tmp`.
 
 ---
 
@@ -142,7 +137,7 @@ mkfs.ext4 /dev/vg_data/lv_data      fsck.ext4 /dev/...      resize2fs /dev/...
 mkfs.xfs  /dev/vg_data/lv_data      xfs_repair /dev/...     xfs_growfs /mountpoint
 ```
 
-**Exam trap:** `tp-mudd` (Fedora 44) and `dell-fedora` default to xfs. `dell-ubuntu`, `muddpi`, `pi-zero` default to ext4. If a scenario says "the volume needs to shrink," xfs is immediately disqualified — the answer requires ext4 (offline, unmounted, with `resize2fs` to a smaller size after `e2fsck -f`).
+**Exam trap:** xfs is the **RHEL server** default. Fedora *Workstation* — including `tp-mudd` — defaults to **btrfs** (verify yours: `findmnt -no FSTYPE /`), while Ubuntu installs default to ext4. Don't conflate "Fedora" with "xfs by default" — that's RHEL/Rocky/Alma. If a scenario says "the volume needs to shrink," xfs is immediately disqualified — the answer requires ext4 (offline, unmounted, with `resize2fs` to a smaller size after `e2fsck -f`) or btrfs (which can shrink online).
 
 ---
 

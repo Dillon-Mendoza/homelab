@@ -1,7 +1,7 @@
 #!/bin/bash
 # Week 01 — Linux Fundamentals + Shell Operations
 # Objectives: 1.1, 1.5
-# Run on: tp-mudd (primary), with optional SSH tasks to dell-ubuntu
+# Run on: tp-mudd only — fully self-contained, no other devices required
 # Estimated time: 45–60 min
 
 DRY_RUN=true  # Set to false to execute. true echoes commands instead of running them.
@@ -107,9 +107,16 @@ echo "[3d] Confirm package manager (should be dnf on Fedora):"
 run_cmd "which dnf && dnf --version | head -1"
 
 echo ""
-echo "[3e] SSH to dell-ubuntu and identify its distro family (dpkg-based):"
-echo "  Run manually: ssh dell-ubuntu 'cat /etc/os-release && which apt'"
-echo "  Compare: Ubuntu uses apt/dpkg. tp-mudd uses dnf/rpm. Same Linux, different toolchains."
+echo "[3e] Compare against the dpkg family WITHOUT leaving this machine —"
+echo "     run Ubuntu in a throwaway container (podman ships with Fedora):"
+echo "  PREDICT FIRST: which package tools do you expect to find inside? Say it, then run."
+run_cmd "podman run --rm docker.io/library/ubuntu:24.04 bash -c 'head -3 /etc/os-release; command -v apt dpkg; apt --version'"
+
+echo ""
+echo "[3f] Same check on the host for contrast — dnf/rpm side by side with 3e's output:"
+run_cmd "head -3 /etc/os-release; command -v dnf rpm"
+echo "  Same kernel family, different packaging toolchains. The exam tests both — the"
+echo "  container gives you a live dpkg system on demand, no second machine needed."
 
 echo ""
 

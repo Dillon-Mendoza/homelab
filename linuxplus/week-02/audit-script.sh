@@ -2,7 +2,7 @@
 # Week 02 Audit — Storage Health + Device/Module Sanity
 # Re-run anytime. Checks fstab integrity, mount option hygiene, disk/inode
 # pressure, and unexpected kernel module state.
-# Run on: tp-mudd (Fedora). Adjust filesystem checks for xfs vs ext4 as noted.
+# Run on: tp-mudd (Fedora 44) only.
 
 PASS=0
 WARN=0

@@ -2,7 +2,8 @@
 # Week 03 Audit — Network State + DNS Resolution Sanity
 # Re-run anytime. Checks interface/route health, DNS resolution chain,
 # listening-port hygiene, and name resolution end to end.
-# Run on: tp-mudd (Fedora). Works on any node; port expectations are per-host.
+# Run on: tp-mudd (Fedora 44) only. No other homelab device needs to be up —
+# reachability checks target this host's own gateway and the public internet.
 
 PASS=0
 WARN=0
@@ -141,16 +142,25 @@ info "$LISTEN_COUNT listening sockets total — full detail: sudo ss -tulpn"
 
 echo ""
 
-# ── Reachability Spot-Check (Tailscale mesh) ───────────────────────────────────
-echo "── Mesh Reachability ──"
+# ── Reachability Spot-Check (this host's own uplink only) ─────────────────────
+echo "── Uplink Reachability ──"
 
-for host in dell-ubuntu muddpi; do
-    if ping -c 1 -W 2 "$host" &>/dev/null; then
-        pass "$host reachable"
+GW_IP=$(ip route | awk '/^default/ {print $3; exit}')
+if [[ -n "$GW_IP" ]]; then
+    if ping -c 1 -W 2 "$GW_IP" &>/dev/null; then
+        pass "Default gateway $GW_IP reachable (link + IP layer healthy)"
     else
-        warn "$host NOT reachable — check tailscale status and ACLs before assuming the host is down"
+        warn "Default gateway $GW_IP NOT answering ping — local link problem, look no further out"
     fi
-done
+else
+    warn "No default gateway to test (no default route)"
+fi
+
+if ping -c 1 -W 2 1.1.1.1 &>/dev/null; then
+    pass "Internet reachable by IP (1.1.1.1) — combined with the DNS checks above, the full chain is testable"
+else
+    warn "1.1.1.1 NOT reachable — if the gateway check passed, the problem is upstream of this host"
+fi
 
 echo ""
 

@@ -70,21 +70,23 @@ netplan apply          # apply permanently
 
 The exam gives a symptom and asks which tool. Learn these as "what question does this tool answer":
 
+Every example below runs from `tp-mudd` alone — targets are this laptop itself (`127.0.0.1`) or the public internet, never another homelab device.
+
 | Tool | Question it answers | Key usage |
 |---|---|---|
-| `ping` / `ping6` | Is the host reachable at the IP layer? | `ping -c 4 muddpi` |
-| `traceroute` | What path do packets take? (UDP by default, needs root for ICMP mode) | `traceroute mudd-cloud` |
-| `tracepath` | Same, but no root needed, and it discovers path MTU | `tracepath dell-ubuntu` |
-| `mtr` | Continuous traceroute + loss stats per hop — where is packet loss happening? | `mtr --report muddpi` |
-| `dig` | What does DNS actually return? | `dig gitea.lan @100.100.100.100`, `dig +short anthropic.com` |
-| `nslookup` | Same question, older tool — still on the objective list | `nslookup dell-ubuntu` |
+| `ping` / `ping6` | Is the host reachable at the IP layer? | `ping -c 4 1.1.1.1` |
+| `traceroute` | What path do packets take? (UDP by default, needs root for ICMP mode) | `traceroute 1.1.1.1` |
+| `tracepath` | Same, but no root needed, and it discovers path MTU | `tracepath 1.1.1.1` |
+| `mtr` | Continuous traceroute + loss stats per hop — where is packet loss happening? | `mtr --report 1.1.1.1` |
+| `dig` | What does DNS actually return? | `dig +short anthropic.com`, `dig anthropic.com @1.1.1.1` (isolate a resolver) |
+| `nslookup` | Same question, older tool — still on the objective list | `nslookup anthropic.com` |
 | `ss` | What is listening / connected on this box? | `ss -tulpn` |
-| `nc` | Is that specific port actually open and accepting? | `nc -zv dell-ubuntu 3000` |
-| `curl` | Does the HTTP layer work? | `curl -I https://...` (headers only), `-v` (full transaction) |
-| `tcpdump` | What is actually on the wire? | `sudo tcpdump -i tailscale0 -n port 53` |
-| `nmap` | What ports are open across a host/subnet? | `nmap -p 22,3000,19999 100.x.x.x` |
-| `iperf3` | What throughput can this link actually sustain? | server: `iperf3 -s`, client: `iperf3 -c dell-ubuntu` |
-| `ethtool` | Link speed/duplex/negotiation on a physical NIC | `ethtool eth0` — meaningless on virtual interfaces like `tailscale0` |
+| `nc` | Is that specific port actually open and accepting? | `nc -zv 127.0.0.1 8080` (against the lab's own test server) |
+| `curl` | Does the HTTP layer work? | `curl -I http://127.0.0.1:8080` (headers only), `-v` (full transaction) |
+| `tcpdump` | What is actually on the wire? | `sudo tcpdump -i lo -n port 8080` — watch your own curl happen |
+| `nmap` | What ports are open across a host/subnet? | `nmap -p 22,8080 127.0.0.1` |
+| `iperf3` | What throughput can this link actually sustain? | one terminal: `iperf3 -s`, another: `iperf3 -c 127.0.0.1` — you run both ends |
+| `ethtool` | Link speed/duplex/negotiation on a physical NIC | `ethtool <nic>` — meaningless on virtual interfaces like `tailscale0` |
 | `hostname` / `hostnamectl` | What is this box called? (`hostnamectl set-hostname` to change, persistent) | `hostnamectl` |
 
 **`ss -tulpn` decoded** — this exact flag string is worth memorizing: **t**cp, **u**dp, **l**istening, **p**rocesses, **n**umeric (no name resolution). It's the modern `netstat -tulpn` and the first command in almost every "is the service actually up" investigation.
@@ -144,13 +146,14 @@ Any scenario about "searching last month's rotated logs" wants `zgrep`, not "ext
 ### rsync — The Workhorse
 
 ```
-rsync -avz /home/tp-mudd/homelab/ dell-ubuntu:/backup/homelab/
+rsync -av /home/tp-mudd/homelab/ /backup/homelab/        # local → local
+rsync -avz /home/tp-mudd/homelab/ user@host:/backup/     # local → remote (same semantics, SSH transport)
 ```
 - `-a` archive = `-rlptgoD`: recursive, links, permissions, times, group, owner, devices. The "preserve everything" flag.
-- `-v` verbose, `-z` compress in transit
+- `-v` verbose, `-z` compress in transit (only worth it over a network — pointless locally)
 - `-n` / `--dry-run` — show what would transfer. **Always dry-run before `--delete`.**
 - `--delete` — remove files from destination that no longer exist in source (true mirror — and true deletion)
-- Runs over SSH by default — your existing key setup to `dell-ubuntu` is the transport.
+- The remote form runs over SSH by default. Every rule (trailing slash, `--delete`, deltas) is identical local or remote — the lab proves them locally where feedback is instant, and `rsync ... localhost:/tmp/...` demonstrates the remote syntax on this same laptop.
 
 **The trailing slash rule (top exam trap for 1.6):**
 - `rsync -av src/ dest/` → copies the **contents** of src into dest
@@ -186,12 +189,12 @@ This exact layering — which piece is the kernel module, which is the emulator,
 
 ### virsh Essentials
 
-The live example: `dell-ubuntu` hosts the `dell-fedora` VM.
+`tp-mudd` has AMD-V — this laptop is a fully capable KVM host. The lab's stretch goal builds a throwaway VM here (`lab-vm`) so every command below can be run against something you own and can delete:
 
 ```
 virsh list --all                  # all VMs, running or not
-virsh dominfo dell-fedora         # CPU/RAM allocation, state, autostart
-virsh domblklist dell-fedora      # disk image paths backing the VM
+virsh dominfo lab-vm              # CPU/RAM allocation, state, autostart
+virsh domblklist lab-vm           # disk image paths backing the VM
 virsh start / shutdown <vm>       # shutdown = graceful ACPI signal
 virsh destroy <vm>                # ⚠ hard power-off — NOT deletion. Names lie.
 virsh undefine <vm>               # this is what actually removes the VM definition
@@ -201,19 +204,19 @@ virsh edit <vm>                   # edit the domain XML (uses $EDITOR)
 
 **Snapshots:**
 ```
-virsh snapshot-create-as dell-fedora pre-upgrade "before n8n update"
-virsh snapshot-list dell-fedora
-virsh snapshot-revert dell-fedora pre-upgrade
+virsh snapshot-create-as lab-vm pre-change "before risky edit"
+virsh snapshot-list lab-vm
+virsh snapshot-revert lab-vm pre-change
 ```
 Internal snapshots require **qcow2** disk images — raw images can't hold them. Migration comes in two flavors: **live** (VM keeps running, memory streamed to the new host) vs. **offline** (shut down, move, start).
 
 ### Disk Images — qemu-img
 
 ```
-qemu-img info /var/lib/libvirt/images/dell-fedora.qcow2   # format, virtual vs actual size
-qemu-img convert -f qcow2 -O raw in.qcow2 out.raw          # convert formats
-qemu-img resize disk.qcow2 +10G                            # grow (then grow partition+fs INSIDE the guest — Week 2's two-step lesson, now three steps)
-qemu-img create -f qcow2 new-disk.qcow2 20G
+qemu-img create -f qcow2 practice.qcow2 5G                # create — costs ~200KB on disk
+qemu-img info practice.qcow2                              # format, virtual vs actual size
+qemu-img convert -f qcow2 -O raw practice.qcow2 out.raw   # convert formats
+qemu-img resize practice.qcow2 +2G                        # grow (then grow partition+fs INSIDE the guest — Week 2's two-step lesson, now three steps)
 ```
 **qcow2 vs raw:** qcow2 = thin-provisioned (grows as used), supports internal snapshots, slight overhead. raw = full size up front, fastest, no snapshot support. `qemu-img info` showing `virtual size: 50G, disk size: 12G` is thin provisioning in action.
 
@@ -227,7 +230,7 @@ qemu-img create -f qcow2 new-disk.qcow2 20G
 | **Routed** | Own subnet, host routes (no NAT) | Yes, if LAN has a route back |
 | **Open** | Like routed, no firewall rules added | Yes |
 
-`dell-fedora` is on NAT — reachable via Tailscale running *inside* the guest rather than via bridged networking. Being able to say *why that works anyway* (the guest makes an outbound connection to the tailnet; NAT permits outbound) is exactly the depth the exam wants.
+Conceptual anchor from your own fleet: the `dell-fedora` VM sits on NAT yet is reachable — because Tailscale runs *inside* the guest and NAT permits outbound connections. You don't need to touch that machine to use the fact; being able to say *why* NAT plus an outbound mesh connection works is exactly the depth the exam wants. A `lab-vm` built here lands on the same libvirt NAT default (`virbr0`) — check it with `virsh dumpxml lab-vm | grep -A3 'interface type'`.
 
 ### VirtIO and Nested Virtualization
 

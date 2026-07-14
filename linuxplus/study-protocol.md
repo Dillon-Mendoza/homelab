@@ -38,8 +38,11 @@ Header block:
 
 Body format — for every command, concept, or tool in scope:
 - Name → what it does → syntax → concrete example using homelab context where possible
-- Prefer real paths, real device names (tp-mudd, dell-ubuntu, dell-fedora, muddpi, pi-zero)
-- No generic /path/to/file examples when a real homelab path exists
+- Every runnable example must work on tp-mudd alone (see Hard Constraint below)
+- Prefer real tp-mudd paths (`/home/tp-mudd/...`); no generic /path/to/file examples
+  when a real one exists
+- Other fleet devices (dell-ubuntu, dell-fedora, muddpi, pi-zero, mudd-cloud) may
+  appear as *conceptual* reference points only — never as a command target
 
 End with a "Quick Recall" section:
 - 12–15 items, one line each, no explanation
@@ -60,7 +63,7 @@ Structure:
 #!/bin/bash
 # Week NN — [Topic]
 # Objectives: [X.X, X.X]
-# Run on: [device(s)]
+# Run on: tp-mudd only — fully self-contained, no other devices required
 # Estimated time: 45–60 min
 
 DRY_RUN=true   # Set to false to execute. true echoes commands instead.
@@ -82,18 +85,31 @@ run_cmd() { if $DRY_RUN; then echo "[DRY RUN] $*"; else eval "$@"; fi; }
 Include `echo` progress markers between tasks so the session has a visible flow.
 End with a summary comment block: what was practiced, which objectives were covered.
 
-Device references — use these role labels:
-- tp-mudd (t0): ThinkPad T14, Fedora 44, dev machine — primary lab host
-- dell-ubuntu (t1): Dell Server, Ubuntu 24.04 — production target
-- dell-fedora (t1): Dell Server Fedora VM, Fedora 43 — n8n Docker host
-- muddpi (t2): Raspberry Pi 4 — backup exit node, Netdata
-- pi-zero (t3): Pi Zero 2W — Netdata only, leaf node
-- mudd-cloud (cloud): Oracle Cloud VM, Ubuntu 22.04 — primary exit node
+**HARD CONSTRAINT — ThinkPad only.** Every lab task and audit check must be fully
+executable on tp-mudd (ThinkPad T14, Fedora 44) with no other device involved:
+- No SSH to other homelab nodes, and no task that requires another node to be
+  powered on or reachable. Public internet targets (e.g. `1.1.1.1`) are fine for
+  path/DNS tools; other homelab devices are not, even as ping targets.
+- Simulate multi-machine and cross-distro scenarios locally instead — these teach
+  more than remote inspection anyway:
+  - dpkg/apt family practice → Ubuntu container via podman (ships with Fedora)
+  - disks, LVM, RAID, filesystems → loop devices backed by files in /tmp
+  - client/server network tools → run both ends on tp-mudd (localhost services,
+    `iperf3 -s` + `-c 127.0.0.1`, `ssh localhost` for remote-syntax practice)
+  - virtualization → tp-mudd has AMD-V; use qemu-img on throwaway images and,
+    as optional stretch, a disposable local VM via libvirt/virt-install
+- Ubuntu/Debian command differences stay in cheatsheets and notes as exam
+  knowledge — the exam tests both families; only *execution* is Fedora-local.
+- Other fleet devices (dell-ubuntu, dell-fedora, muddpi, pi-zero, mudd-cloud)
+  may be referenced conceptually ("this is what production does") but never
+  as something the student must run a command on or against.
 
 ### 3. audit-script.sh — Security/validation (re-runnable anytime)
 
 Purpose: audit or validate the week's topic area on the local system.
 Not a one-time exercise — designed to be useful as an ongoing tool.
+Same hard constraint as the lab: every check runs on tp-mudd alone and must not
+fail just because another homelab device is powered off.
 
 Output format:
 ```
@@ -141,6 +157,8 @@ Sections (in order):
 - One paragraph explaining where this week's topic is already live in the homelab
 - Reference specific devices, services, config files that are already in production
 - This is the bridge between abstract exam content and real experience already earned
+- Fleet devices are cited here as conceptual anchors only — the paragraph must
+  never instruct running anything on a device other than tp-mudd
 
 ---
 

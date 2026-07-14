@@ -2,7 +2,9 @@
 # Exam: CompTIA Linux+ XK0-006 V8 | Exam Week: September 14, 2026
 # Two sessions per week. Both blocks scheduled every Sunday. No exceptions.
 # Session A = concept review + cheatsheet (45 min)
-# Session B = hands-on lab on homelab hardware (45–60 min)
+# Session B = hands-on lab, ALL on tp-mudd (45–60 min) — no other device needed.
+#   Multi-machine/cross-distro scenarios are simulated locally: podman containers,
+#   loop devices, localhost services, throwaway VMs. See study-protocol.md.
 
 ---
 
@@ -65,9 +67,9 @@
 
 **Session B — Lab (45–60 min)**
 - On `tp-mudd`: run `lsmod`, `lspci`, `lsblk`, `lscpu`, `lsmem`. Document what you find.
-- On `dell-ubuntu`: inspect current LVM setup — `pvdisplay`, `vgdisplay`, `lvdisplay`. Map the full storage layout.
-- Practice mount/umount with a loop device or USB drive. Add a test entry to `/etc/fstab`, verify with `mount -a`, then remove it cleanly.
-- Run `df -h` and `du -sh /var/log/*` to understand space usage.
+- Build a full LVM stack from loop devices: `pvcreate` → `vgcreate` → `lvcreate`, grow it with `lvextend` + `resize2fs`/`xfs_growfs` (the two-step trap, done live), extend the VG, tear down in the correct order.
+- fstab practice against a loop-backed LV: write a real UUID entry with `nofail`, verify with `mount -a` and `findmnt --verify`, remove it cleanly.
+- Run `df -h` vs `df -i` — then produce inode exhaustion on purpose on a tiny ext4 loop filesystem and watch "No space left on device" with free space showing.
 
 **Exam gotchas:**
 - `lvcreate -L 10G` uses absolute size; `lvcreate -l 100%FREE` uses remaining space.
@@ -90,10 +92,10 @@
 - KVM/QEMU: KVM is the kernel module, QEMU is the emulator. `libvirt` is the API layer. `virsh` is the CLI.
 
 **Session B — Lab (45–60 min)**
-- On `tp-mudd`: document the full network topology using only CLI tools — `ip addr`, `ip route`, `ss -tulpn`, `nmap` scan of Tailscale subnet.
-- Practice `tar`: create an archive of `/etc`, verify contents with `tar -tvf`, extract to `/tmp`.
-- Practice `rsync`: sync a directory between `tp-mudd` and `dell-ubuntu` over Tailscale. Verify with `diff`.
-- On `dell-ubuntu`: inspect the running KVM VM with `virsh list --all`, `virsh dominfo dell-fedora`.
+- On `tp-mudd`: document the network topology using only CLI tools — `ip addr`, `ip route`, `ss -tulpn`, `nmap` of localhost. Prove the `nsswitch.conf` resolution order with a temporary `/etc/hosts` override.
+- Run both ends yourself: start a local HTTP server, then diagnose it with `ss`, `nc`, `curl`, `nmap`, and `tcpdump` on loopback. Path tools (`ping`, `tracepath`, `mtr`) against public internet targets only.
+- Practice `tar`: archive `/etc`, verify with `tar -tvf`, extract to `/tmp`. Practice `rsync` between local directories: prove trailing-slash semantics and `--delete` (dry-run first), verify with `diff -r`.
+- Verify `tp-mudd`'s own KVM stack (`lscpu` virtualization flag, `kvm_amd`, `/dev/kvm`), master `qemu-img` create/info/resize/convert. Optional stretch: `virt-install` a throwaway VM and run the full `virsh` lifecycle — including destroy vs. undefine — against it.
 
 **Exam gotchas:**
 - `rsync` trailing slash matters: `rsync src/ dest/` copies contents of src; `rsync src dest/` copies src directory itself.
@@ -142,10 +144,10 @@
 - `journalctl` flags: `-u servicename`, `-b` (current boot), `-f` (follow), `--since`, `--until`, `-p err` (priority).
 
 **Session B — Lab (45–60 min)**
-- Inspect all running processes: `ps aux`, `top`, `htop`. Find the PID of `gitea` or `n8n`. Send SIGHUP and observe behavior.
+- Inspect all running processes: `ps aux`, `top`, `htop`. Find the PID of `tailscaled`. Send SIGHUP to a disposable test process (not a production service) and observe behavior.
 - Write a crontab entry that logs the date to a file every 5 minutes. Verify it runs. Remove it.
-- On `dell-ubuntu`: run full `apt` workflow — update index, list upgradable packages, install `htop` if not present, verify, remove cleanly.
-- Inspect the Gitea service unit file with `systemctl cat gitea`. Modify a `[Service]` parameter in an override, `daemon-reload`, verify change with `systemctl status`.
+- Full package workflow, both families, on `tp-mudd`: `dnf` update/install/verify/remove plus a `dnf history` rollback; then the `apt` equivalent inside an Ubuntu podman container.
+- Inspect a local service unit with `systemctl cat sshd` (or `tailscaled`). Modify a `[Service]` parameter in an override, `daemon-reload`, verify change with `systemctl status`.
 
 **Exam gotchas:**
 - `systemctl stop` is temporary. `systemctl disable` prevents autostart on boot. Both together are needed to fully deactivate a service.
@@ -168,10 +170,10 @@
 - SELinux contexts: `user:role:type:level`. The `type` field is what most policies enforce. `ls -Z` shows context. `restorecon` resets to policy default.
 
 **Session B — Lab (45–60 min)**
-- On `dell-fedora`: inspect the n8n Docker container — `docker ps`, `docker inspect`, `docker logs`. Pull a new image, run it detached, exec into it, stop and remove it.
-- On `dell-ubuntu`: review all current UFW rules (`ufw status numbered`). Cross-reference against `firewall/ubuntu-server.md` in the homelab repo. Add a test rule, verify, then delete it.
-- On `tp-mudd`: run `ausearch -m AVC -ts today` to review SELinux denials. Run `getenforce`. Check context on `/etc/ssh/sshd_config` with `ls -Z`.
-- Practice `sudo` audit: `grep sudo /var/log/auth.log` or `journalctl _COMM=sudo`. Confirm all sudo activity is logged.
+- Container lifecycle with podman on `tp-mudd`: pull an image, run it detached, exec into it, read logs, `inspect` it, stop and remove it. Note where rootless podman differs from Docker (exam knowledge — the n8n Docker deployment on `dell-fedora` is the conceptual contrast).
+- FirewallD on `tp-mudd`: list zones and active rules, cross-reference against the documented tailscale0-only policy, add a test rule (runtime vs `--permanent`), verify, delete it. UFW syntax stays as cheatsheet knowledge for the exam.
+- SELinux on `tp-mudd` (enforcing): run `ausearch -m AVC -ts today`, `getenforce`, check context on `/etc/ssh/sshd_config` with `ls -Z`, `restorecon` a deliberately mislabeled test file.
+- Practice `sudo` audit locally: `journalctl _COMM=sudo` (Fedora has no `/var/log/auth.log` — that's the Debian/Ubuntu path; know both for the exam). Confirm all sudo activity is logged.
 
 **Exam gotchas:**
 - Podman is rootless by default — container volumes and network behavior differ from Docker when run as non-root.
@@ -196,8 +198,8 @@
 **Session B — Lab (45–60 min)**
 - Generate a GPG keypair. Encrypt a test file to yourself. Decrypt it. Sign a file and verify the signature.
 - On `tp-mudd`: run `auditctl -l` to see active audit rules. Add a rule watching `/etc/passwd` for writes. Modify `/etc/passwd` (via `chage`, not directly). Check `ausearch -f /etc/passwd`.
-- On `dell-fedora` (SELinux enforcing): deliberately trigger an AVC denial. Use `audit2allow` to generate a policy module. Do not apply it — just read the output.
-- Review password aging policy on all devices. Verify `/etc/login.defs` settings for PASS_MAX_DAYS, PASS_MIN_DAYS, PASS_WARN_AGE.
+- On `tp-mudd` (SELinux enforcing): deliberately trigger an AVC denial against a disposable test service or file. Use `audit2allow` to generate a policy module. Do not apply it — just read the output.
+- Review password aging policy on `tp-mudd`. Verify `/etc/login.defs` settings for PASS_MAX_DAYS, PASS_MIN_DAYS, PASS_WARN_AGE.
 
 **Exam gotchas:**
 - LDAP and Kerberos are commonly tested conceptually, not operationally — know what each does and when each is used.
@@ -248,7 +250,7 @@
 **Session B — Lab (45–60 min)**
 - In the homelab repo: create a practice branch, make changes across two commits, squash them into one with `git rebase -i HEAD~2`, push the branch.
 - Practice `git stash`: make a change, stash it, switch branches, pop the stash.
-- Write a minimal Ansible ad-hoc command: ping all Tailscale-accessible hosts. If Ansible isn't installed, install it. Document the inventory file format.
+- Write a minimal Ansible ad-hoc command against a localhost inventory (`ansible_connection=local`); add an Ubuntu podman container as a second "host" for a real two-node inventory. If Ansible isn't installed, install it. Document the inventory file format.
 - Review the homelab repo commit history with `git log --oneline --graph`. Practice `git diff HEAD~3 HEAD`.
 
 **Exam gotchas:**

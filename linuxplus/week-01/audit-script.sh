@@ -1,7 +1,8 @@
 #!/bin/bash
 # Week 01 Audit — Boot Integrity + Shell Environment
 # Re-run anytime. Checks boot config integrity, PATH safety, shell config hygiene.
-# Run on: tp-mudd (Fedora). Adjust paths for Ubuntu nodes as noted.
+# Run on: tp-mudd (Fedora 44) only. Ubuntu-path fallbacks below are kept as
+# exam knowledge — the distro difference itself is a tested objective.
 
 PASS=0
 WARN=0

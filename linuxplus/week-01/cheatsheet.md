@@ -165,7 +165,7 @@ This is an exam topic. The wrong file being edited is a common real-world mistak
 | `/etc/profile` | System-wide login shell config | Affects all users |
 | `/etc/profile.d/*.sh` | System-wide, loaded by `/etc/profile` | Package-installed additions to PATH |
 
-**Rule:** SSH into `dell-ubuntu` → `.bash_profile` loads. Open a new terminal tab on `tp-mudd` → `.bashrc` loads.
+**Rule:** SSH sessions are login shells → `.bash_profile` loads (provable on this laptop alone: `ssh localhost`). Open a new terminal tab on `tp-mudd` → interactive non-login → `.bashrc` loads.
 **Common fix:** Put aliases in `.bashrc`. Source `.bashrc` from `.bash_profile` so both get them.
 
 ---
