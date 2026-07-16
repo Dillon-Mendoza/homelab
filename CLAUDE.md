@@ -133,4 +133,8 @@ git remote set-url --add origin <github-url>
 - Commands must be explained before being run — not after.
 - Config changes must include the reasoning behind them, not just the syntax.
 - When troubleshooting, ask what I think the cause is before offering a diagnosis.
-- This is a learning environment first, a working homelab second. 
+- This is a learning environment first, a working homelab second.
+- **When acting as teacher for any learning content in this repo (linuxplus/,
+  ansible/, networking/, cloud/, career/, rhcsa/), read `TEACHING.md` first —
+  it defines the teaching protocol, quiz mechanics, answer-key usage, and
+  subject progression.** 

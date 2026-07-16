@@ -1,0 +1,79 @@
+# 02-hardening.yml — the documented security posture, enforced as code.
+# When this runs changed=0 across the fleet, CLAUDE.md's security tables and
+# reality are provably the same thing.
+#
+# LOCKOUT SAFETY — read before running:
+#   1. sshd changes are validated (`sshd -t` via validate:) BEFORE the file
+#      lands; a typo aborts the task instead of breaking the daemon.
+#   2. The restart is a handler — it fires only if something changed.
+#   3. Nothing here touches Tailscale, tailscale0 rules, or the ACL. Even if
+#      sshd broke, `tailscale ssh` does not exist here by design (CLAUDE.md) —
+#      so run this ONE HOST AT A TIME with a working session held open on the
+#      target until the new config is verified. That open session is the
+#      rollback plan.
+#   Phase 4 only. --check --diff first. Always.
+---
+- name: Fleet hardening — sshd
+  hosts: fleet
+  become: true
+
+  tasks:
+    - name: sshd posture ({{ sshd_settings | length }} settings from group_vars)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?\s*{{ item.key }}\s'
+        line: "{{ item.key }} {{ item.value }}"
+        validate: /usr/sbin/sshd -t -f %s
+      loop: "{{ sshd_settings | dict2items }}"
+      notify: restart sshd
+
+  handlers:
+    - name: restart sshd
+      ansible.builtin.service:
+        # Debian family calls it ssh; RHEL calls it sshd
+        name: "{{ 'sshd' if ansible_facts['os_family'] == 'RedHat' else 'ssh' }}"
+        state: restarted
+
+- name: Fleet hardening — firewall (Debian family / ufw)
+  hosts: debian_family
+  become: true
+
+  tasks:
+    - name: ufw default deny incoming
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+
+    - name: Expected ports allowed (from group_vars expected_ports)
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.split('/')[0] }}"
+        proto: "{{ item.split('/')[1] }}"
+      loop: "{{ expected_ports[inventory_hostname] }}"
+
+    - name: ufw enabled
+      community.general.ufw:
+        state: enabled
+
+    # Note what this play does NOT do: it never deletes rules it doesn't
+    # know about. Unknown extra rules are surfaced by 03-fleet-audit instead —
+    # detection first, enforcement only after the expected_ports open question
+    # in group_vars/all.yml is resolved.
+
+- name: Fleet hardening — firewall (RHEL family / firewalld)
+  hosts: rhel_family
+  become: true
+
+  tasks:
+    - name: Expected services/ports open, permanently
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        immediate: true          # the exam trap, answered in code: permanent AND runtime
+        state: enabled
+      loop: "{{ expected_ports[inventory_hostname] }}"
+
+    - name: SELinux stays enforcing (detects drift, fails loudly)
+      ansible.posix.selinux:
+        policy: targeted
+        state: enforcing

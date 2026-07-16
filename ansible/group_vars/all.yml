@@ -1,0 +1,40 @@
+# Fleet-wide variables. Group- or host-specific overrides go in
+# group_vars/<group>.yml or host_vars/<host>.yml as the need appears —
+# don't create those files speculatively.
+---
+# Packages every fleet member should have (extend deliberately, not by mood)
+baseline_packages:
+  - vim
+  - htop
+  - tmux
+  - curl
+  - rsync
+  - git
+
+# sshd posture enforced by 02-hardening.yml — mirrors the documented homelab
+# policy. Changing a value here and re-running the playbook IS the change
+# process now; hand-edits on hosts become drift the playbook will revert.
+sshd_settings:
+  PasswordAuthentication: "no"
+  PermitRootLogin: "no"
+  X11Forwarding: "no"
+
+# Expected open ports per host beyond SSH — used by 02-hardening.yml (ufw)
+# and 03-fleet-audit.yml (verification). Source of truth: CLAUDE.md firewall
+# table, copied EXACTLY. Format: list of "port/proto".
+#
+# OPEN QUESTION found while writing this file: the CLAUDE.md firewall table
+# lists no 19999 for muddpi/pi-zero, yet the services table says both serve
+# Netdata on 19999 over Tailscale. Either UFW isn't filtering tailscale0 on
+# the Pis, or the table is stale. Resolve on-host (`sudo ufw status verbose`)
+# before trusting these lists for enforcement — audit-only until then.
+expected_ports:
+  dell-ubuntu: ["22/tcp", "19999/tcp", "9443/tcp", "80/tcp", "443/tcp"]
+  dell-fedora: ["22/tcp", "3000/tcp"]
+  muddpi:      ["22/tcp", "80/tcp", "443/tcp", "9001/tcp"]
+  pi-zero:     ["22/tcp"]
+  mudd-cloud:  ["22/tcp"]
+
+# Audit thresholds for 03-fleet-audit.yml
+audit_disk_max_pcent: 85
+audit_load_per_core_max: 1.0
